@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
 
-import 'SharedStates.dart';
-import 'main.dart';
+import 'AppContextHolder.dart';
+import 'consts.dart';
 
 class GlobalAppBar extends AppBar{
-  static State _state;
-  static Text _title = Text('博物菌');
-  static ImageIcon _leading = ImageIcon(AssetImage('assets/leading-s.png'));
-  static SharedStates sharedStates;
-  static onSelect(model) async {
-    _state.setState((){
-      sharedStates.busy = true;
-    });
-  }
 
+  static AppContextHolder ctx;
+  static Text _title = Text(APP_TITLE);
+  static ImageIcon _leading = ImageIcon(AssetImage(APP_LEADING_IMG));
+  static onSelect(model) async {
+    AppContextHolder.appState.setState(() {
+      ctx.state.busy = true;
+      ctx.state.model = model;
+      ctx.state.recognitions = null;
+    });
+    await ctx.models.loadModel();
+
+    if (ctx.state.image != null){
+      ctx.models.predictImage(ctx.state.image);
+    }else{
+      AppContextHolder.appState.setState(() {
+        ctx.state.busy = false;
+      });
+    }
+  }
   static List<Widget> _actions = [
     PopupMenuButton<String>(
     onSelected: onSelect,
@@ -33,14 +43,12 @@ class GlobalAppBar extends AppBar{
   )];
 
   GlobalAppBar({
-    State state,
-    SharedStates sharedStates
+    AppContextHolder ctx
   }): super(
     title: _title,
     leading: _leading,
     actions: _actions
   ){
-    GlobalAppBar._state = state;
-    GlobalAppBar.sharedStates = sharedStates;
+    GlobalAppBar.ctx = ctx;
   }
 }

@@ -1,24 +1,16 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:math';
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:image/image.dart' as img;
 
-import 'package:tflite/tflite.dart';
+import 'package:flutter/material.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:wildlife_discovery/GlobalAppBar.dart';
 
-import 'SharedStates.dart';
+import 'AppContextHolder.dart';
 
 void main() => runApp(new App());
 
-//const String mobile = "MobileNet";
 const String ssd = "SSD MobileNet";
 const String yolo = "Tiny YOLOv2";
-//const String deeplab = "DeepLab";
-//const String posenet = "PoseNet";
 
 class App extends StatelessWidget {
   @override
@@ -31,260 +23,33 @@ class App extends StatelessWidget {
 
 class MyApp extends StatefulWidget {
   @override
-  _MyAppState createState() => new _MyAppState();
+  MyAppState createState() => new MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  File _image;
-  List _recognitions;
-  String _model = yolo;
-  double _imageHeight;
-  double _imageWidth;
-  bool _busy = false;
-  SharedStates sharedStates = new SharedStates();
+class MyAppState extends State<MyApp> {
+  AppContextHolder ctx = new AppContextHolder();
 
   Future predictImagePicker() async {
     var image = await ImagePicker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
     setState(() {
-      _busy = true;
+      ctx.state.busy = true;
     });
-    predictImage(image);
-  }
-
-  Future predictImage(File image) async {
-    if (image == null) return;
-
-    switch (_model) {
-      case yolo:
-        await yolov2Tiny(image);
-        break;
-      case ssd:
-        await ssdMobileNet(image);
-        break;
-//      case deeplab:
-//        await segmentMobileNet(image);
-//        break;
-//      case posenet:
-//        await poseNet(image);
-//        break;
-      default:
-        await recognizeImage(image);
-    // await recognizeImageBinary(image);
-    }
-
-    new FileImage(image)
-        .resolve(new ImageConfiguration())
-        .addListener(ImageStreamListener((ImageInfo info, bool _) {
-      setState(() {
-        _imageHeight = info.image.height.toDouble();
-        _imageWidth = info.image.width.toDouble();
-      });
-    }));
-
-    setState(() {
-      _image = image;
-      _busy = false;
-    });
+    ctx.models.predictImage(image);
   }
 
   @override
   void initState() {
     super.initState();
-
-    _busy = true;
-
-    loadModel().then((val) {
-      setState(() {
-        _busy = false;
-      });
-    });
   }
-
-  Future loadModel() async {
-    Tflite.close();
-    try {
-      String res;
-      switch (_model) {
-        case yolo:
-          res = await Tflite.loadModel(
-            model: "assets/yolov2_tiny.tflite",
-            labels: "assets/yolov2_tiny.txt",
-          );
-          break;
-        case ssd:
-          res = await Tflite.loadModel(
-              model: "assets/ssd_mobilenet.tflite",
-              labels: "assets/ssd_mobilenet.txt");
-          break;
-//        case deeplab:
-//          res = await Tflite.loadModel(
-//              model: "assets/deeplabv3_257_mv_gpu.tflite",
-//              labels: "assets/deeplabv3_257_mv_gpu.txt");
-//          break;
-//        case posenet:
-//          res = await Tflite.loadModel(
-//              model: "assets/posenet_mv1_075_float_from_checkpoints.tflite");
-//          break;
-        default:
-          res = await Tflite.loadModel(
-            model: "assets/mobilenet_v1_1.0_224.tflite",
-            labels: "assets/mobilenet_v1_1.0_224.txt",
-          );
-      }
-      print(res);
-    } on PlatformException {
-      print('Failed to load model.');
-    }
-  }
-
-  Uint8List imageToByteListFloat32(
-      img.Image image, int inputSize, double mean, double std) {
-    var convertedBytes = Float32List(1 * inputSize * inputSize * 3);
-    var buffer = Float32List.view(convertedBytes.buffer);
-    int pixelIndex = 0;
-    for (var i = 0; i < inputSize; i++) {
-      for (var j = 0; j < inputSize; j++) {
-        var pixel = image.getPixel(j, i);
-        buffer[pixelIndex++] = (img.getRed(pixel) - mean) / std;
-        buffer[pixelIndex++] = (img.getGreen(pixel) - mean) / std;
-        buffer[pixelIndex++] = (img.getBlue(pixel) - mean) / std;
-      }
-    }
-    return convertedBytes.buffer.asUint8List();
-  }
-
-  Uint8List imageToByteListUint8(img.Image image, int inputSize) {
-    var convertedBytes = Uint8List(1 * inputSize * inputSize * 3);
-    var buffer = Uint8List.view(convertedBytes.buffer);
-    int pixelIndex = 0;
-    for (var i = 0; i < inputSize; i++) {
-      for (var j = 0; j < inputSize; j++) {
-        var pixel = image.getPixel(j, i);
-        buffer[pixelIndex++] = img.getRed(pixel);
-        buffer[pixelIndex++] = img.getGreen(pixel);
-        buffer[pixelIndex++] = img.getBlue(pixel);
-      }
-    }
-    return convertedBytes.buffer.asUint8List();
-  }
-
-  Future recognizeImage(File image) async {
-    var recognitions = await Tflite.runModelOnImage(
-      path: image.path,
-      numResults: 6,
-      threshold: 0.05,
-      imageMean: 127.5,
-      imageStd: 127.5,
-    );
-    setState(() {
-      _recognitions = recognitions;
-    });
-  }
-
-  Future recognizeImageBinary(File image) async {
-    var imageBytes = (await rootBundle.load(image.path)).buffer;
-    img.Image oriImage = img.decodeJpg(imageBytes.asUint8List());
-    img.Image resizedImage = img.copyResize(oriImage, 224, 224);
-    var recognitions = await Tflite.runModelOnBinary(
-      binary: imageToByteListFloat32(resizedImage, 224, 127.5, 127.5),
-      numResults: 6,
-      threshold: 0.05,
-    );
-    setState(() {
-      _recognitions = recognitions;
-    });
-  }
-
-  Future yolov2Tiny(File image) async {
-    var recognitions = await Tflite.detectObjectOnImage(
-      path: image.path,
-      model: "YOLO",
-      threshold: 0.3,
-      imageMean: 0.0,
-      imageStd: 255.0,
-      numResultsPerClass: 1,
-    );
-    // var imageBytes = (await rootBundle.load(image.path)).buffer;
-    // img.Image oriImage = img.decodeJpg(imageBytes.asUint8List());
-    // img.Image resizedImage = img.copyResize(oriImage, 416, 416);
-    // var recognitions = await Tflite.detectObjectOnBinary(
-    //   binary: imageToByteListFloat32(resizedImage, 416, 0.0, 255.0),
-    //   model: "YOLO",
-    //   threshold: 0.3,
-    //   numResultsPerClass: 1,
-    // );
-    setState(() {
-      _recognitions = recognitions;
-    });
-  }
-
-  Future ssdMobileNet(File image) async {
-    var recognitions = await Tflite.detectObjectOnImage(
-      path: image.path,
-      numResultsPerClass: 5,
-    );
-    // var imageBytes = (await rootBundle.load(image.path)).buffer;
-    // img.Image oriImage = img.decodeJpg(imageBytes.asUint8List());
-    // img.Image resizedImage = img.copyResize(oriImage, 300, 300);
-    // var recognitions = await Tflite.detectObjectOnBinary(
-    //   binary: imageToByteListUint8(resizedImage, 300),
-    //   numResultsPerClass: 1,
-    // );
-    setState(() {
-      _recognitions = recognitions;
-    });
-  }
-
-//  Future segmentMobileNet(File image) async {
-//    var recognitions = await Tflite.runSegmentationOnImage(
-//      path: image.path,
-//      imageMean: 127.5,
-//      imageStd: 127.5,
-//    );
-//
-//    setState(() {
-//      _recognitions = recognitions;
-//    });
-////  }
-//
-//  Future poseNet(File image) async {
-//    var recognitions = await Tflite.runPoseNetOnImage(
-//      path: image.path,
-//      numResults: 2,
-//    );
-//
-//    print(recognitions);
-//
-//    setState(() {
-//      _recognitions = recognitions;
-//    });
-//  }
-
-  onSelect(model) async {
-    setState(() {
-      _busy = true;
-      _model = model;
-      _recognitions = null;
-    });
-    await loadModel();
-
-    if (_image != null)
-      predictImage(_image);
-    else
-      setState(() {
-        _busy = false;
-      });
-  }
-
   List<Widget> renderBoxes(Size screen) {
-    if (_recognitions == null) return [];
-    if (_imageHeight == null || _imageWidth == null) return [];
+    if (ctx.state.recognitions == null) return [];
+    if (ctx.state.imageHeight == null || ctx.state.imageWidth == null) return [];
 
     double factorX = screen.width;
-    double factorY = _imageHeight / _imageWidth * screen.width;
+    double factorY = ctx.state.imageHeight / ctx.state.imageWidth * screen.width;
     Color blue = Color.fromRGBO(37, 213, 253, 1.0);
-    return _recognitions.map((re) {
+    return ctx.state.recognitions.map((re) {
       return Positioned(
         left: re["rect"]["x"] * factorX,
         top: re["rect"]["y"] * factorY,
@@ -311,96 +76,24 @@ class _MyAppState extends State<MyApp> {
     }).toList();
   }
 
-  List<Widget> renderKeypoints(Size screen) {
-    if (_recognitions == null) return [];
-    if (_imageHeight == null || _imageWidth == null) return [];
-
-    double factorX = screen.width;
-    double factorY = _imageHeight / _imageWidth * screen.width;
-
-    var lists = <Widget>[];
-    _recognitions.forEach((re) {
-      var color = Color((Random().nextDouble() * 0xFFFFFF).toInt() << 0)
-          .withOpacity(1.0);
-      var list = re["keypoints"].values.map<Widget>((k) {
-        return Positioned(
-          left: k["x"] * factorX - 6,
-          top: k["y"] * factorY - 6,
-          width: 100,
-          height: 12,
-          child: Container(
-            child: Text(
-              "● ${k["part"]}",
-              style: TextStyle(
-                color: color,
-                fontSize: 12.0,
-              ),
-            ),
-          ),
-        );
-      }).toList();
-
-      lists..addAll(list);
-    });
-
-    return lists;
-  }
-
   @override
   Widget build(BuildContext context) {
+    AppContextHolder.appState = this;
     Size size = MediaQuery.of(context).size;
     List<Widget> stackChildren = [];
 
-//    if (_model == deeplab && _recognitions != null) {
-//      stackChildren.add(Positioned(
-//        top: 0.0,
-//        left: 0.0,
-//        width: size.width,
-//        child: _image == null
-//            ? Text('No image selected.')
-//            : Container(
-//            decoration: BoxDecoration(
-//                image: DecorationImage(
-//                    alignment: Alignment.topCenter,
-//                    image: MemoryImage(_recognitions),
-//                    fit: BoxFit.fill)),
-//            child: Opacity(opacity: 0.3, child: Image.file(_image))),
-//      ));
-//    } else {
       stackChildren.add(Positioned(
         top: 0.0,
         left: 0.0,
         width: size.width,
-        child: _image == null ? Text('No image selected.') : Image.file(_image),
+        child: ctx.state.image == null ? Text('No image selected.') : Image.file(ctx.state.image),
       ));
-//    }
-
-//    if (_model == mobile) {
-//      stackChildren.add(Center(
-//        child: Column(
-//          children: _recognitions != null
-//              ? _recognitions.map((res) {
-//            return Text(
-//              "${res["index"]} - ${res["label"]}: ${res["confidence"].toStringAsFixed(3)}",
-//              style: TextStyle(
-//                color: Colors.black,
-//                fontSize: 20.0,
-//                background: Paint()..color = Colors.white,
-//              ),
-//            );
-//          }).toList()
-//              : [],
-//        ),
-//      ));
-//    } else
-    if (_model == ssd || _model == yolo) {
+    if (ctx.state.model == ssd || ctx.state.model == yolo) {
       stackChildren.addAll(renderBoxes(size));
     }
-//    else if (_model == posenet) {
-//      stackChildren.addAll(renderKeypoints(size));
-//    }
 
-    if (sharedStates.busy) {
+
+    if (ctx.state.busy) {
       stackChildren.add(const Opacity(
         child: ModalBarrier(dismissible: false, color: Colors.grey),
         opacity: 0.3,
@@ -409,7 +102,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     return Scaffold(
-      appBar: GlobalAppBar(state: this, sharedStates: sharedStates),
+      appBar: GlobalAppBar(ctx:ctx),
       body: Stack(
         children: stackChildren,
       ),
