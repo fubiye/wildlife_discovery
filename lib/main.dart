@@ -406,7 +406,8 @@ class _MyAppState extends State<MyApp> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('tflite example app'),
+        title: const Text('博物菌'),
+        leading: const ImageIcon(AssetImage('assets/leading-s.png')),
         actions: <Widget>[
           PopupMenuButton<String>(
             onSelected: onSelect,
