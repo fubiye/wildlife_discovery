@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'main.dart';
+import 'consts.dart';
 
 class SharedStates {
   bool busy = false;

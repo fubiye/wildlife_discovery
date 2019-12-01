@@ -6,11 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:wildlife_discovery/GlobalAppBar.dart';
 
 import 'AppContextHolder.dart';
+import 'consts.dart';
 
 void main() => runApp(new App());
-
-const String ssd = "SSD MobileNet";
-const String yolo = "Tiny YOLOv2";
 
 class App extends StatelessWidget {
   @override
