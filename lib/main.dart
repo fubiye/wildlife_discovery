@@ -8,6 +8,9 @@ import 'package:image/image.dart' as img;
 
 import 'package:tflite/tflite.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:wildlife_discovery/GlobalAppBar.dart';
+
+import 'SharedStates.dart';
 
 void main() => runApp(new App());
 
@@ -38,6 +41,7 @@ class _MyAppState extends State<MyApp> {
   double _imageHeight;
   double _imageWidth;
   bool _busy = false;
+  SharedStates sharedStates = new SharedStates();
 
   Future predictImagePicker() async {
     var image = await ImagePicker.pickImage(source: ImageSource.gallery);
@@ -396,7 +400,7 @@ class _MyAppState extends State<MyApp> {
 //      stackChildren.addAll(renderKeypoints(size));
 //    }
 
-    if (_busy) {
+    if (sharedStates.busy) {
       stackChildren.add(const Opacity(
         child: ModalBarrier(dismissible: false, color: Colors.grey),
         opacity: 0.3,
@@ -405,40 +409,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('博物菌'),
-        leading: const ImageIcon(AssetImage('assets/leading-s.png')),
-        actions: <Widget>[
-          PopupMenuButton<String>(
-            onSelected: onSelect,
-            itemBuilder: (context) {
-              List<PopupMenuEntry<String>> menuEntries = [
-//                const PopupMenuItem<String>(
-//                  child: Text(mobile),
-//                  value: mobile,
-//                ),
-                const PopupMenuItem<String>(
-                  child: Text(ssd),
-                  value: ssd,
-                ),
-                const PopupMenuItem<String>(
-                  child: Text(yolo),
-                  value: yolo,
-                ),
-//                const PopupMenuItem<String>(
-//                  child: Text(deeplab),
-//                  value: deeplab,
-//                ),
-//                const PopupMenuItem<String>(
-//                  child: Text(posenet),
-//                  value: posenet,
-//                )
-              ];
-              return menuEntries;
-            },
-          )
-        ],
-      ),
+      appBar: GlobalAppBar(state: this, sharedStates: sharedStates),
       body: Stack(
         children: stackChildren,
       ),
