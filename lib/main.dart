@@ -11,11 +11,11 @@ import 'package:image_picker/image_picker.dart';
 
 void main() => runApp(new App());
 
-const String mobile = "MobileNet";
+//const String mobile = "MobileNet";
 const String ssd = "SSD MobileNet";
 const String yolo = "Tiny YOLOv2";
-const String deeplab = "DeepLab";
-const String posenet = "PoseNet";
+//const String deeplab = "DeepLab";
+//const String posenet = "PoseNet";
 
 class App extends StatelessWidget {
   @override
@@ -34,7 +34,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   File _image;
   List _recognitions;
-  String _model = mobile;
+  String _model = yolo;
   double _imageHeight;
   double _imageWidth;
   bool _busy = false;
@@ -58,6 +58,12 @@ class _MyAppState extends State<MyApp> {
       case ssd:
         await ssdMobileNet(image);
         break;
+//      case deeplab:
+//        await segmentMobileNet(image);
+//        break;
+//      case posenet:
+//        await poseNet(image);
+//        break;
       default:
         await recognizeImage(image);
     // await recognizeImageBinary(image);
@@ -92,21 +98,21 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future loadModel() async {
-//    Tflite.close();
+    Tflite.close();
     try {
       String res;
-//      switch (_model) {
-//        case yolo:
-//          res = await Tflite.loadModel(
-//            model: "assets/yolov2_tiny.tflite",
-//            labels: "assets/yolov2_tiny.txt",
-//          );
-//          break;
-//        case ssd:
-//          res = await Tflite.loadModel(
-//              model: "assets/ssd_mobilenet.tflite",
-//              labels: "assets/ssd_mobilenet.txt");
-//          break;
+      switch (_model) {
+        case yolo:
+          res = await Tflite.loadModel(
+            model: "assets/yolov2_tiny.tflite",
+            labels: "assets/yolov2_tiny.txt",
+          );
+          break;
+        case ssd:
+          res = await Tflite.loadModel(
+              model: "assets/ssd_mobilenet.tflite",
+              labels: "assets/ssd_mobilenet.txt");
+          break;
 //        case deeplab:
 //          res = await Tflite.loadModel(
 //              model: "assets/deeplabv3_257_mv_gpu.tflite",
@@ -116,16 +122,12 @@ class _MyAppState extends State<MyApp> {
 //          res = await Tflite.loadModel(
 //              model: "assets/posenet_mv1_075_float_from_checkpoints.tflite");
 //          break;
-//        default:
-//          res = await Tflite.loadModel(
-//            model: "assets/detect.tflite",
-//            labels: "assets/labelmap.txt",
-//          );
-//      }
-      res = await Tflite.loadModel(
-        model: "assets/detect.tflite",
-        labels: "assets/labelmap.txt",
-      );
+        default:
+          res = await Tflite.loadModel(
+            model: "assets/mobilenet_v1_1.0_224.tflite",
+            labels: "assets/mobilenet_v1_1.0_224.txt",
+          );
+      }
       print(res);
     } on PlatformException {
       print('Failed to load model.');
@@ -216,7 +218,7 @@ class _MyAppState extends State<MyApp> {
   Future ssdMobileNet(File image) async {
     var recognitions = await Tflite.detectObjectOnImage(
       path: image.path,
-      numResultsPerClass: 1,
+      numResultsPerClass: 5,
     );
     // var imageBytes = (await rootBundle.load(image.path)).buffer;
     // img.Image oriImage = img.decodeJpg(imageBytes.asUint8List());
@@ -229,6 +231,31 @@ class _MyAppState extends State<MyApp> {
       _recognitions = recognitions;
     });
   }
+
+//  Future segmentMobileNet(File image) async {
+//    var recognitions = await Tflite.runSegmentationOnImage(
+//      path: image.path,
+//      imageMean: 127.5,
+//      imageStd: 127.5,
+//    );
+//
+//    setState(() {
+//      _recognitions = recognitions;
+//    });
+////  }
+//
+//  Future poseNet(File image) async {
+//    var recognitions = await Tflite.runPoseNetOnImage(
+//      path: image.path,
+//      numResults: 2,
+//    );
+//
+//    print(recognitions);
+//
+//    setState(() {
+//      _recognitions = recognitions;
+//    });
+//  }
 
   onSelect(model) async {
     setState(() {
@@ -320,52 +347,54 @@ class _MyAppState extends State<MyApp> {
     Size size = MediaQuery.of(context).size;
     List<Widget> stackChildren = [];
 
-    if (_model == deeplab && _recognitions != null) {
-      stackChildren.add(Positioned(
-        top: 0.0,
-        left: 0.0,
-        width: size.width,
-        child: _image == null
-            ? Text('No image selected.')
-            : Container(
-            decoration: BoxDecoration(
-                image: DecorationImage(
-                    alignment: Alignment.topCenter,
-                    image: MemoryImage(_recognitions),
-                    fit: BoxFit.fill)),
-            child: Opacity(opacity: 0.3, child: Image.file(_image))),
-      ));
-    } else {
+//    if (_model == deeplab && _recognitions != null) {
+//      stackChildren.add(Positioned(
+//        top: 0.0,
+//        left: 0.0,
+//        width: size.width,
+//        child: _image == null
+//            ? Text('No image selected.')
+//            : Container(
+//            decoration: BoxDecoration(
+//                image: DecorationImage(
+//                    alignment: Alignment.topCenter,
+//                    image: MemoryImage(_recognitions),
+//                    fit: BoxFit.fill)),
+//            child: Opacity(opacity: 0.3, child: Image.file(_image))),
+//      ));
+//    } else {
       stackChildren.add(Positioned(
         top: 0.0,
         left: 0.0,
         width: size.width,
         child: _image == null ? Text('No image selected.') : Image.file(_image),
       ));
-    }
+//    }
 
-    if (_model == mobile) {
-      stackChildren.add(Center(
-        child: Column(
-          children: _recognitions != null
-              ? _recognitions.map((res) {
-            return Text(
-              "${res["index"]} - ${res["label"]}: ${res["confidence"].toStringAsFixed(3)}",
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 20.0,
-                background: Paint()..color = Colors.white,
-              ),
-            );
-          }).toList()
-              : [],
-        ),
-      ));
-    } else if (_model == ssd || _model == yolo) {
+//    if (_model == mobile) {
+//      stackChildren.add(Center(
+//        child: Column(
+//          children: _recognitions != null
+//              ? _recognitions.map((res) {
+//            return Text(
+//              "${res["index"]} - ${res["label"]}: ${res["confidence"].toStringAsFixed(3)}",
+//              style: TextStyle(
+//                color: Colors.black,
+//                fontSize: 20.0,
+//                background: Paint()..color = Colors.white,
+//              ),
+//            );
+//          }).toList()
+//              : [],
+//        ),
+//      ));
+//    } else
+    if (_model == ssd || _model == yolo) {
       stackChildren.addAll(renderBoxes(size));
-    } else if (_model == posenet) {
-      stackChildren.addAll(renderKeypoints(size));
     }
+//    else if (_model == posenet) {
+//      stackChildren.addAll(renderKeypoints(size));
+//    }
 
     if (_busy) {
       stackChildren.add(const Opacity(
@@ -383,10 +412,10 @@ class _MyAppState extends State<MyApp> {
             onSelected: onSelect,
             itemBuilder: (context) {
               List<PopupMenuEntry<String>> menuEntries = [
-                const PopupMenuItem<String>(
-                  child: Text(mobile),
-                  value: mobile,
-                ),
+//                const PopupMenuItem<String>(
+//                  child: Text(mobile),
+//                  value: mobile,
+//                ),
                 const PopupMenuItem<String>(
                   child: Text(ssd),
                   value: ssd,
@@ -395,14 +424,14 @@ class _MyAppState extends State<MyApp> {
                   child: Text(yolo),
                   value: yolo,
                 ),
-                const PopupMenuItem<String>(
-                  child: Text(deeplab),
-                  value: deeplab,
-                ),
-                const PopupMenuItem<String>(
-                  child: Text(posenet),
-                  value: posenet,
-                )
+//                const PopupMenuItem<String>(
+//                  child: Text(deeplab),
+//                  value: deeplab,
+//                ),
+//                const PopupMenuItem<String>(
+//                  child: Text(posenet),
+//                  value: posenet,
+//                )
               ];
               return menuEntries;
             },

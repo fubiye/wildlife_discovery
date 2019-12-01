@@ -30,6 +30,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+#  tflite:
+#    path: ../
+  image_picker: 0.4.10
+
+  image: 2.0.5
 
 
 # For information on the generic Dart part of this file, see the
@@ -47,6 +52,16 @@ flutter:
   assets:
     - assets/detect.tflite
     - assets/labelmap.txt
+    - assets/cat.jpg
+    - assets/mobilenet_v1_1.0_224.txt
+    - assets/mobilenet_v1_1.0_224.tflite
+    - assets/yolov2_tiny.tflite
+    - assets/yolov2_tiny.txt
+    - assets/ssd_mobilenet.tflite
+    - assets/ssd_mobilenet.txt
+    - assets/deeplabv3_257_mv_gpu.tflite
+    - assets/deeplabv3_257_mv_gpu.txt
+    - assets/posenet_mv1_075_float_from_checkpoints.tflite
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
