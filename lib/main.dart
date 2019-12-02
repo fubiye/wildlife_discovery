@@ -103,15 +103,19 @@ class MyAppState extends State<MyApp> {
         onPressed: onInputModeSelect,
         tooltip: '选择输入',
         child: PopupMenuButton<InputMethod>(
-          onSelected: (InputMethod inputMethod){
+          onSelected: (InputMethod inputMethod) async {
             setState(() {
               if(inputMethod == InputMethod.IMG){
+                ctx.state.model = yolo;
                 ctx.state.inputMode = IMG_MODEL;
                 ctx.imgInput.predictImagePicker();
+
               }else{
+                ctx.state.model = ssd;
                 ctx.state.inputMode = VIDEO_MODEL;
               }
             });
+            await ctx.models.loadModel();
           },
           itemBuilder: (BuildContext context) => <PopupMenuEntry<InputMethod>>[
             const PopupMenuItem<InputMethod>(
