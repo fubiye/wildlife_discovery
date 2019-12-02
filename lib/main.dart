@@ -101,8 +101,29 @@ class MyAppState extends State<MyApp> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: onInputModeSelect,
-        tooltip: 'Pick Image',
-        child: Icon(Icons.image),
+        tooltip: '选择输入',
+        child: PopupMenuButton<InputMethod>(
+          onSelected: (InputMethod inputMethod){
+            setState(() {
+              if(inputMethod == InputMethod.IMG){
+                ctx.state.inputMode = IMG_MODEL;
+                ctx.imgInput.predictImagePicker();
+              }else{
+                ctx.state.inputMode = VIDEO_MODEL;
+              }
+            });
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<InputMethod>>[
+            const PopupMenuItem<InputMethod>(
+              value: InputMethod.IMG,
+              child: Text('图片'),
+            ),
+            const PopupMenuItem<InputMethod>(
+              value: InputMethod.VIDEO,
+              child: Text('视频'),
+            ),
+          ],
+        )
       ),
     );
   }

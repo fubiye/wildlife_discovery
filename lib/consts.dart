@@ -7,3 +7,5 @@ const String yolo = "Tiny YOLOv2";
 
 const String IMG_MODEL = "IMG";
 const String VIDEO_MODEL = "VIDEO";
+
+enum InputMethod { IMG, VIDEO}
