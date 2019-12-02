@@ -22,16 +22,11 @@ class Models {
             labels: "assets/yolov2_tiny.txt",
           );
           break;
-        case ssd:
+        default:
           res = await Tflite.loadModel(
               model: "assets/ssd_mobilenet.tflite",
               labels: "assets/ssd_mobilenet.txt");
           break;
-        default:
-          res = await Tflite.loadModel(
-            model: "assets/mobilenet_v1_1.0_224.tflite",
-            labels: "assets/mobilenet_v1_1.0_224.txt",
-          );
       }
       print(res);
     } on PlatformException {
