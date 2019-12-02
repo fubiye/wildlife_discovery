@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'package:image_picker/image_picker.dart';
 import 'package:wildlife_discovery/GlobalAppBar.dart';
 
 import 'AppContextHolder.dart';
@@ -27,51 +26,9 @@ class MyApp extends StatefulWidget {
 class MyAppState extends State<MyApp> {
   AppContextHolder ctx = new AppContextHolder();
 
-  Future predictImagePicker() async {
-    var image = await ImagePicker.pickImage(source: ImageSource.gallery);
-    if (image == null) return;
-    setState(() {
-      ctx.state.busy = true;
-    });
-    ctx.models.predictImage(image);
-  }
-
   @override
   void initState() {
     super.initState();
-  }
-  List<Widget> renderBoxes(Size screen) {
-    if (ctx.state.recognitions == null) return [];
-    if (ctx.state.imageHeight == null || ctx.state.imageWidth == null) return [];
-
-    double factorX = screen.width;
-    double factorY = ctx.state.imageHeight / ctx.state.imageWidth * screen.width;
-    Color blue = Color.fromRGBO(37, 213, 253, 1.0);
-    return ctx.state.recognitions.map((re) {
-      return Positioned(
-        left: re["rect"]["x"] * factorX,
-        top: re["rect"]["y"] * factorY,
-        width: re["rect"]["w"] * factorX,
-        height: re["rect"]["h"] * factorY,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.all(Radius.circular(8.0)),
-            border: Border.all(
-              color: blue,
-              width: 2,
-            ),
-          ),
-          child: Text(
-            "${re["detectedClass"]} ${(re["confidenceInClass"] * 100).toStringAsFixed(0)}%",
-            style: TextStyle(
-              background: Paint()..color = blue,
-              color: Colors.white,
-              fontSize: 12.0,
-            ),
-          ),
-        ),
-      );
-    }).toList();
   }
 
   @override
@@ -80,16 +37,14 @@ class MyAppState extends State<MyApp> {
     Size size = MediaQuery.of(context).size;
     List<Widget> stackChildren = [];
 
-      stackChildren.add(Positioned(
-        top: 0.0,
-        left: 0.0,
-        width: size.width,
-        child: ctx.state.image == null ? Text('No image selected.') : Image.file(ctx.state.image),
-      ));
-    if (ctx.state.model == ssd || ctx.state.model == yolo) {
-      stackChildren.addAll(renderBoxes(size));
-    }
+    stackChildren.add(Positioned(
+      top: 0.0,
+      left: 0.0,
+      width: size.width,
+      child: ctx.state.image == null ? Text('No image selected.') : Image.file(ctx.state.image),
+    ));
 
+    stackChildren.addAll(ctx.renders.renderBoxes(size));
 
     if (ctx.state.busy) {
       stackChildren.add(const Opacity(
@@ -105,7 +60,7 @@ class MyAppState extends State<MyApp> {
         children: stackChildren,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: predictImagePicker,
+        onPressed: ctx.imgInput.predictImagePicker,
         tooltip: 'Pick Image',
         child: Icon(Icons.image),
       ),
