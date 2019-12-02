@@ -52,61 +52,55 @@ class MyAppState extends State<MyApp> {
     });
   }
 
+  onInputModeSelect(){
+    setState(() {
+        ctx.state.inputMode = VIDEO_MODEL;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     AppContextHolder.appState = this;
     Size size = MediaQuery.of(context).size;
     List<Widget> stackChildren = [];
+    if(ctx.state.inputMode == IMG_MODEL){
+      stackChildren.add(Positioned(
+        top: 0.0,
+        left: 0.0,
+        width: size.width,
+        child: ctx.state.image == null ? Text('No image selected.') : Image.file(ctx.state.image),
+      ));
+      stackChildren.addAll(ctx.renders.renderBoxes(size));
+      if (ctx.state.busy) {
+        stackChildren.add(const Opacity(
+          child: ModalBarrier(dismissible: false, color: Colors.grey),
+          opacity: 0.3,
+        ));
+        stackChildren.add(const Center(child: CircularProgressIndicator()));
+      }
+    }else{
+      stackChildren.add(Camera(
+        cameras,
+        ctx.state.model,
+        setRecognitions,
+      ));
 
-//    stackChildren.add(Positioned(
-//      top: 0.0,
-//      left: 0.0,
-//      width: size.width,
-//      child: ctx.state.image == null ? Text('No image selected.') : Image.file(ctx.state.image),
-//    ));
+      stackChildren.add(BoundBox(
+          ctx.state.recognitions == null ? [] : ctx.state.recognitions,
+          math.max(ctx.state.imageHeight, ctx.state.imageWidth),
+          math.min(ctx.state.imageHeight, ctx.state.imageWidth),
+          size.height,
+          size.width,
+          ctx.state.model));
+    }
 
-//    stackChildren.addAll(ctx.renders.renderBoxes(size));
-
-//    if (ctx.state.busy) {
-//      stackChildren.add(const Opacity(
-//        child: ModalBarrier(dismissible: false, color: Colors.grey),
-//        opacity: 0.3,
-//      ));
-//      stackChildren.add(const Center(child: CircularProgressIndicator()));
-//    }
-//    stackChildren.add(Camera(
-//      cameras,
-//      ctx.state.model,
-//      setRecognitions,
-//    ));
-//
-//    stackChildren.add(BoundBox(
-//        ctx.state.recognitions == null ? [] : ctx.state.recognitions,
-//        math.max(ctx.state.imageHeight, ctx.state.imageWidth),
-//        math.min(ctx.state.imageHeight, ctx.state.imageWidth),
-//        size.height,
-//        size.width,
-//        ctx.state.model));
     return Scaffold(
       appBar: GlobalAppBar(ctx:ctx),
       body: Stack(
-        children: [
-          Camera(
-            cameras,
-            ctx.state.model,
-            setRecognitions,
-          ),
-          BoundBox(
-              ctx.state.recognitions == null ? [] : ctx.state.recognitions,
-              math.max(ctx.state.imageHeight, ctx.state.imageWidth),
-              math.min(ctx.state.imageHeight, ctx.state.imageWidth),
-              size.height,
-              size.width,
-              ctx.state.model),
-        ],
+        children: stackChildren
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: ctx.imgInput.predictImagePicker,
+        onPressed: onInputModeSelect,
         tooltip: 'Pick Image',
         child: Icon(Icons.image),
       ),

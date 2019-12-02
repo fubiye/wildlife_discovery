@@ -9,4 +9,5 @@ class SharedStates {
   File image;
   double imageHeight = 0;
   double imageWidth = 0;
+  String inputMode = IMG_MODEL;
 }
