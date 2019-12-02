@@ -4,9 +4,9 @@ import 'consts.dart';
 
 class SharedStates {
   bool busy = false;
-  String model = yolo;
+  String model = ssd;
   List recognitions;
   File image;
-  double imageHeight;
-  double imageWidth;
+  double imageHeight = 0;
+  double imageWidth = 0;
 }
